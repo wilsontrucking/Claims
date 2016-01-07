@@ -1,0 +1,187 @@
+Sub ZMain()
+  Const WAIT_SECONDS = 2
+  Const WAIT_SECONDS1 = 1
+  Const WAIT_SECONDS3 = 3
+  Const DELIMITER = "^!?"
+  ' Allocating the local variables for this PASSPORT macro
+  Dim n_screen_size_return_value, screen_name
+  Dim ack_sent
+  Dim clin_email
+
+' Determine the actual screen size (number of rows and columns)
+  n_screen_size_return_value = getScreenSizeUserFunction()
+
+  screen_name = GetString(1,2,12)
+  Pro_num = GetString(3,44,8)
+
+  If screen_name <> "CLIN CL06AAO" Then
+    msgbox "This macro only works with the CLIN screen"
+    Exit Sub
+  End If
+
+  clin_email = ""
+'Get the relevant data from the screen
+  clin_email = clin_email&"Claim Date"&DELIMITER&Trim(GetString(10,45,8))&" "&DELIMITER
+  clin_email = clin_email&"Name"&DELIMITER&Trim(GetString(3,2,25))&" "&DELIMITER
+  clin_email = clin_email&"Address 1"&DELIMITER&Trim(GetString(4,2,25))&" "&DELIMITER
+  clin_email = clin_email&"Address 2"&DELIMITER&Trim(GetString(5,2,25))&" "&DELIMITER
+  clin_email = clin_email&"City, State Zipcode"&DELIMITER&Trim(GetString(6,2,25))&" "&DELIMITER
+  clin_email = clin_email&"Master Pro Number"&DELIMITER&Trim(GetString(3,44,8))&" "&DELIMITER
+  clin_email = clin_email&"XREF Pro Number"&DELIMITER&Trim(GetString(3,65,14))&" "&DELIMITER 'needs to be checked with Rohan'
+  clin_email = clin_email&"Claim Number"&DELIMITER&Trim(GetString(2,46,5))&" "&DELIMITER
+  clin_email = clin_email&"Claim Amount"&DELIMITER&Trim(GetString(4,65,14))&" "&DELIMITER
+
+  shipper_code = GetString(8,16,7)
+
+  ack_sent = Trim(GetString(11,45,8))
+
+  If ack_sent <> "" Then
+    ack_sent = "Ack sent via US mail on: "&ack_sent
+  Else
+    ack_sent = "Ack needs to be emailed"
+  End If
+
+  clin_email = clin_email&"Acknowledgement Status"&DELIMITER&ack_sent&" "&DELIMITER
+  clin_email = clin_email&"Claimant Claim#"&DELIMITER&Trim(GetString(10,66,15))&" "&DELIMITER
+  clin_email = clin_email&"Claimant Customer Code"&DELIMITER&Trim(GetString(2,14,11))&" "&DELIMITER
+  clin_email = clin_email&"Claim Reason"&DELIMITER&Trim(GetString(20,9,25))&" "&DELIMITER
+  clin_email = clin_email&"ORIG"&DELIMITER&Trim(GetString(4,43,9))&" "&DELIMITER
+  clin_email = clin_email&"DEST"&DELIMITER&Trim(GetString(5,43,9))&" "&DELIMITER
+
+  trans = "CLCU"
+  
+  SendHostKeys "<PF3>"
+  Wait WAIT_SECONDS1
+  Sendstring 1,1,trans
+  SendHostKeys "<Enter>"
+  Wait WAIT_SECONDS1
+  SendString 4,20,shipper_code
+  SendHostKeys "<Enter>"
+  Wait WAIT_SECONDS1
+  pay_comments = Trim(GetString(15,3,74))
+
+  clin_email = clin_email&"Payment Comments"&DELIMITER&pay_comments&" "&DELIMITER
+
+' Send email with the info
+  sendEmail(Array(Trim(Pro_num)&":CLIN",clin_email))
+  
+  trans1 =  "CLIN" 
+  SendHostKeys "<PF3>"
+  Wait WAIT_SECONDS
+  Sendstring 1,1,trans1
+  Wait WAIT_SECONDS1
+  Sendstring 14,50,"1"
+  SendHostKeys "<Enter>"
+  Wait WAIT_SECONDS1
+
+  msgbox "Email sent"
+
+
+End Sub
+
+' ****Function*****
+' Determine the actual screen size (number of rows and columns)
+Function getScreenSizeUserFunction()
+
+' Allocate the local variables for this function
+   Dim n_row, n_col
+   Dim n_screen_size
+
+' Determine the actual screen size (number of rows and columns)
+   n_screen_size = GetScreenSize ()
+   Select Case n_screen_size
+      Case 2000
+         n_row = 25
+         n_col = 80
+
+      Case 2560
+         n_row = 32
+         n_col = 80
+
+      Case 3168
+         n_row = 24
+         n_col = 132 
+
+      Case 3300
+         n_row = 25
+         n_col = 132
+
+      Case 3440
+         n_row = 43
+         n_col = 80
+
+      Case 3564
+         n_row = 27
+         n_col = 132
+
+      Case Else
+         n_row = 24
+         n_col = 80
+   End Select
+
+   getScreenSizeUserFunction = Array(n_row,n_col)
+
+End Function
+
+
+' ****Function*****
+Function sendEmail(emailInfo)
+  EmailSubject = emailInfo(0)
+  EmailBody = emailInfo(1)
+  Const EmailFrom = "wilsontruckingcorp@shjintl.com"
+  Const EmailFromName = "Wilson Trucking Corp"
+  Const EmailTo = "claims@wilsontrucking.com"
+  'Const EmailTo = "gurpreetk@shjintl.com"
+  Const SMTPServer = "smtp.gmail.com"
+  Const SMTPLogon = "wilsontruckingcorp@shjintl.com"
+  Const SMTPPassword = "wilson39"
+  Const SMTPSSL = True
+  Const SMTPPort = 465
+
+  Const cdoSendUsingPickup = 1  'Send message using local SMTP service pickup directory.
+  Const cdoSendUsingPort = 2  'Send the message using SMTP over TCP/IP networking.
+
+  Const cdoAnonymous = 0  ' No authentication
+  Const cdoBasic = 1  ' BASIC clear text authentication
+  Const cdoNTLM = 2   ' NTLM, Microsoft proprietary authentication
+
+  ' First, create the message
+
+  Set objMessage = CreateObject("CDO.Message")
+  objMessage.Subject = EmailSubject
+  objMessage.From = """" & EmailFromName & """ <" & EmailFrom & ">"
+  objMessage.To = EmailTo
+  objMessage.TextBody = EmailBody
+  'objMessage.HTMLBody = EmailBody
+  ' Second, configure the server
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/sendusing") = 2
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/smtpserver") = SMTPServer
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/smtpauthenticate") = cdoBasic
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/sendusername") = SMTPLogon
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/sendpassword") = SMTPPassword
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/smtpserverport") = SMTPPort
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/smtpusessl") = SMTPSSL
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/smtpconnectiontimeout") = 60
+
+  objMessage.Configuration.Fields.Update
+
+  ' Now send the message!
+
+  objMessage.Send
+End Function

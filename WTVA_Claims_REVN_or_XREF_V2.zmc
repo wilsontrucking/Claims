@@ -1,0 +1,118 @@
+'******************************************************
+'**UPDATE**FIND A WAY TO REPLACE Wait WITH WaitForNoX**
+'******************************************************
+
+Sub ZMain()
+  
+  Const WAIT_SECONDS = 2
+' Allocating the local variables for this PASSPORT macro
+  Dim n_screen_size_return_value, pro_number
+  Dim pro_type
+  Dim cntr
+
+' Determine the actual screen size (number of rows and columns)
+  n_screen_size_return_value = getScreenSizeUserFunction()
+  pro_type = ""
+'******************************************************
+'******************GET PRO INFO FROM USER**************
+'******************************************************
+' Get the pro number from the user   
+  pro_number = InputBox("Enter a pro number","Revenue or XREF Pro Check")
+  If IsEmpty(pro_number) Then
+    Exit Sub 
+  Else If isNumeric(pro_number) = false or len(pro_number) <> 8 or pro_number = "" Then
+    msgbox("Pro number: "&pro_number&" is invalid. Please re-run the macro.")
+    Exit Sub
+    End If 
+  End If
+'****UPDATE****WHEN AN INVALID NUMBER IS PUT IN BRING UP MSG BOX AGAIN*****
+
+' Get the number of XREF pro's from the user  
+'******************************************************
+'******************GET XREF PRO INFO*******************
+'******************************************************
+  SendString 1, 2, "XREF"
+  SendHostKeys "<ENTER>"
+  Wait WAIT_SECONDS
+  SendString 11, 36, pro_number
+  SendHostKeys "<ENTER>"
+  Wait WAIT_SECONDS
+
+  If GetString(4,5,3) = "PRO" Then
+    pro_type = pro_number&" is a revenue pro!"
+    SendHostKeys "<PF3>"
+    Wait WAIT_SECONDS
+    SendHostKeys "<PF3>"
+    Wait WAIT_SECONDS
+  Else
+    If GetString(9,29,5) = "ENTER" Then
+      SendHostKeys "<PF3>"
+      Wait WAIT_SECONDS
+      SendString 1, 2, "ARTR"
+      SendHostKeys "<ENTER>"
+      Wait WAIT_SECONDS
+      SendString 3, 13, pro_number
+      SendHostKeys "<ENTER>"
+      Wait WAIT_SECONDS
+      If Trim(GetString(4,48,8)) > "" Then
+        pro_type = pro_number&" is a XREF pro. The revenue pro for this XREF pro is: "&GetString(4,48,8)
+        SendHostKeys "<PF3>"
+      Else
+      	If GetString(23,3,11) = "*** PRO NO." Then
+      	  pro_type = pro_number&" is an invalid pro!!!"
+      	  SendHostKeys "<PF3>"
+      	   Wait WAIT_SECONDS
+      	Else
+          pro_type = pro_number&" is a revenue pro!"
+          SendHostKeys "<PF3>"
+          Wait WAIT_SECONDS
+        End If
+      End If
+    End If
+  End If
+  msgbox pro_type
+End Sub
+
+' ****Function*****
+' Determine the actual screen size (number of rows and columns)
+Function getScreenSizeUserFunction()
+
+' Allocate the local variables for this function
+   Dim n_row, n_col
+   Dim n_screen_size
+
+' Determine the actual screen size (number of rows and columns)
+   n_screen_size = GetScreenSize ()
+   Select Case n_screen_size
+      Case 2000
+         n_row = 25
+         n_col = 80
+
+      Case 2560
+         n_row = 32
+         n_col = 80
+
+      Case 3168
+         n_row = 24
+         n_col = 132 
+
+      Case 3300
+         n_row = 25
+         n_col = 132
+
+      Case 3440
+         n_row = 43
+         n_col = 80
+
+      Case 3564
+         n_row = 27
+         n_col = 132
+
+      Case Else
+         n_row = 24
+         n_col = 80
+   End Select
+
+   getScreenSizeUserFunction = Array(n_row,n_col)
+
+End Function

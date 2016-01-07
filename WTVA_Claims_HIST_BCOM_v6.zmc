@@ -1,0 +1,436 @@
+'******************************************************
+'**UPDATE**FIND A WAY TO REPLACE Wait WITH WaitForNoX**
+'******************************************************
+
+Sub ZMain()
+  
+  Const WAIT_SECONDS = 2
+  Const WAIT_HIST_SECONDS = 3
+' Allocating the local variables for this PASSPORT macro
+  Dim n_screen_size_return_value, master_pro_number, xref_pro_total_number, ret, pro_history_update, start_row_pro_history, find_bcom
+  Dim master_pro_ARTR_email
+  Dim master_pro_history_email
+  Dim master_pro_bcom_email
+  Dim pro_ARTR_line
+  Dim pro_history_line
+  Dim xref_pro_numbers()
+  Dim xref_pro_history_email()
+  Dim xref_pro_bcom_email()
+  Dim cntr
+
+' Determine the actual screen size (number of rows and columns)
+  n_screen_size_return_value = getScreenSizeUserFunction()
+
+'******************************************************
+'******************GET PRO INFO FROM USER**************
+'******************************************************
+' Get the master pro number from the user   
+  master_pro_number = InputBox("Enter a pro number","HIST & BCOM Information")
+  If IsEmpty(master_pro_number) Then
+    Exit Sub 
+  Else If isNumeric(master_pro_number) = false or len(master_pro_number) <> 8 or master_pro_number = "" Then
+    msgbox("Pro number: "&master_pro_number&" is invalid. Please re-run the macro.")
+    Exit Sub
+    End If 
+  End If
+'****UPDATE****WHEN AN INVALID NUMBER IS PUT IN BRING UP MSG BOX AGAIN*****
+
+' Get the number of XREF pro's from the user  
+'******************************************************
+'******************GET XREF PRO INFO*******************
+'******************************************************
+  SendString 1, 2, "XREF"
+  SendHostKeys "<ENTER>"
+  Wait WAIT_SECONDS
+  SendString 11, 36, master_pro_number
+  SendHostKeys "<ENTER>"
+  Wait WAIT_SECONDS
+
+  If GetString(4,5,3) = "PRO" Then
+    Do
+      xref_pro_total_number = 0
+      For i=9 to 19
+        If len(trim(GetString(i,2,8))) > 0 Then
+          xref_pro_total_number = xref_pro_total_number + 1
+          ReDim Preserve xref_pro_numbers(xref_pro_total_number)
+          ReDim Preserve xref_pro_history_email(xref_pro_total_number)
+          ReDim Preserve xref_pro_bcom_email(xref_pro_total_number)
+          xref_pro_numbers(xref_pro_total_number) = GetString(i,2,8)
+        End IF
+      Next
+     Loop Until (GetString(23,9,3) = "END")
+     SendHostKeys "<PF3>"
+     Wait WAIT_SECONDS
+     SendHostKeys "<PF3>"
+     Wait WAIT_SECONDS
+  Else
+    If GetString(9,29,5) = "ENTER" Then
+      SendHostKeys "<PF3>"
+      Wait WAIT_SECONDS
+      SendString 1, 2, "ARTR"
+      SendHostKeys "<ENTER>"
+      Wait WAIT_SECONDS
+      SendString 3, 13, master_pro_number
+      SendHostKeys "<ENTER>"
+      Wait WAIT_SECONDS
+      If Trim(GetString(4,48,8)) > "" Then
+          master_pro_number = GetString(4,48,8)
+          SendHostKeys "<PF3>"
+          Wait WAIT_SECONDS
+          SendString 1, 2, "XREF"
+          SendHostKeys "<ENTER>"
+          Wait WAIT_SECONDS
+          SendString 11, 36, master_pro_number
+          SendHostKeys "<ENTER>"
+          Wait WAIT_SECONDS
+          Do
+            xref_pro_total_number = 0
+              for i=9 to 19
+                If len(trim(GetString(i,2,8))) > 0 Then
+                  xref_pro_total_number = xref_pro_total_number + 1
+                  ReDim Preserve xref_pro_numbers(xref_pro_total_number)
+                  ReDim Preserve xref_pro_history_email(xref_pro_total_number)
+                  ReDim Preserve xref_pro_bcom_email(xref_pro_total_number)
+                  xref_pro_numbers(xref_pro_total_number) = GetString(i,2,8)
+                End IF
+              Next   
+          Loop Until (GetString(23,9,3) = "END")
+          SendHostKeys "<PF3>"
+          Wait WAIT_SECONDS
+          SendHostKeys "<PF3>"
+          Wait WAIT_SECONDS
+      Else
+          SendHostKeys "<PF3>"
+          Wait WAIT_SECONDS
+          xref_pro_total_number = 0
+          ReDim Preserve xref_pro_numbers(xref_pro_total_number)
+          ReDim Preserve xref_pro_history_email(xref_pro_total_number)
+          ReDim Preserve xref_pro_bcom_email(xref_pro_total_number)
+      End If
+    End If
+  End If
+
+'******************************************************'
+'************ Get the Master Pro ARTR info ************'
+'******************************************************'
+  SendString 1, 2, "ARTR"
+  SendHostKeys "<ENTER>"
+  Wait WAIT_SECONDS
+  SendString 3, 13, master_pro_number
+  SendHostKeys "<ENTER>"
+  Wait WAIT_SECONDS
+
+  If GetString(23, 15, 13) = "NOT ON MASTER" Then
+    msgbox("Pro number: "&master_pro_number&" is invalid. Please re-run the macro.") 
+    SendHostKeys "<PF3>"
+    Exit Sub
+  End If
+
+  start_row_pro_history = 1
+
+	For pro_pos = start_row_pro_history to n_screen_size_return_value(0)-2
+	' function call to get the HIST screen line and check for Transaction OSDE
+	' If OSDE present then the OSDE should be highlighted in the text
+	' else the text string should stay the same 
+
+		pro_ARTR_line = GetString(pro_pos, 1, 80)
+		master_pro_ARTR_email = master_pro_ARTR_email & "<br>" & pro_ARTR_line
+
+	Next
+
+	SendHostKeys "<PF3>"
+	Wait WAIT_SECONDS
+
+
+'******************************************************
+'******************GET MASTER PRO INFO*****************
+'******************************************************
+  SendString 1, 2, "HIST"
+  SendHostKeys "<ENTER>"
+  Wait WAIT_SECONDS
+  master_pro_number = Trim(master_pro_number)
+  If len(master_pro_number) = 8 Then
+     SendString 7, 35, master_pro_number
+  Else
+     SendString 7, 35, "0" & master_pro_number
+  End If
+  SendHostKeys "<ENTER>"
+  Wait WAIT_SECONDS
+
+'****UPDATE****check if the right pro number was entered on the screen*****
+  pro_history_update = GetString (23,3,18)
+
+  If pro_history_update = "PRO NOT ON HISTORY" Then
+    msgbox("Pro number: "&master_pro_number&" is invalid. Please re-run the macro.") 
+    SendHostKeys "<PF3>"
+    Exit Sub
+  End If
+
+  start_row_pro_history = 1
+' to catch the case 'where special instructions for the rates are present
+' we store the first transaction name and the date of the transaction
+' if these two values do not change on pressing the PF8, then we should 
+' force exit the HIST screen'
+
+  firstTran = GetString(7,23,4)
+  firstTranDate = GetString(7,6,7)
+' Get the HIST information
+  Do
+    For pro_pos = start_row_pro_history to n_screen_size_return_value(0)-2
+    ' function call to get the HIST screen line and check for Transaction OSDE
+    ' If OSDE present then the OSDE should be highlighted in the text
+    ' else the text string should stay the same 
+      
+      pro_history_line = getHistLine(pro_pos)
+      
+      'master_pro_history_email = master_pro_history_email & "<br>" & GetString(pro_pos,1,80)
+      master_pro_history_email = master_pro_history_email & "<br>" & pro_history_line
+
+      find_bcom = GetString(pro_pos,23,4)
+
+      If pro_pos > 6 and find_bcom = "BCOM" Then
+        
+        SendString pro_pos, 3, "X"
+        SendHostKeys "<ENTER>"
+        Wait WAIT_HIST_SECONDS
+
+        For bcom_pos = 1 to n_screen_size_return_value(0)-2
+          master_pro_bcom_email = master_pro_bcom_email & "<br>" & GetString(bcom_pos,1,80) 
+        next  
+        master_pro_bcom_email = master_pro_bcom_email & "<br>" & "<br>" & "<br>"
+        
+        SendHostKeys "<PF3>"
+        Wait WAIT_HIST_SECONDS
+
+      End If
+    Next
+
+    start_row_pro_history = 7
+    SendHostKeys "<PF8>"
+    Wait WAIT_SECONDS
+
+    firstTranNext = GetString(7,23,4)
+    firstTranDateNext = GetString(7,6,7)
+
+    If firstTran = firstTranNext AND firstTranDate = firstTranDateNext Then
+       	Exit Do
+    else
+		firstTranDate = firstTranDateNext
+		firstTran = firstTranNext
+    End If
+
+
+  Loop Until (GetString(23,3,36) = "CANNOT PAGE FORWARD, NO MORE HISTORY")
+   
+  SendHostKeys "<PF3>"
+  Wait WAIT_SECONDS
+
+'******************************************************
+'******************GET XREF PRO INFO*****************
+'******************************************************
+  For i=1 to xref_pro_total_number
+    SendString 1, 2, "HIST"
+    SendHostKeys "<ENTER>"
+    Wait WAIT_SECONDS
+    xref_pro_numbers(i) = trim(xref_pro_numbers(i))
+    'msgbox len(xref_pro_numbers(i))
+    If len(xref_pro_numbers(i)) = 8 Then
+       SendString 7, 35, xref_pro_numbers(i)
+    Else
+       SendString 7, 35, "0" & xref_pro_numbers(i)
+    End If
+    SendHostKeys "<ENTER>"
+    Wait WAIT_SECONDS
+
+    '****UPDATE****check if the right pro number was entered on the screen*****
+    pro_history_update = GetString(23,3,18) 
+
+    If pro_history_update = "PRO NOT ON HISTORY" Then
+      msgbox("Pro number: "&xref_pro_numbers(i)&" is invalid. Please re-run the macro.") 
+      SendHostKeys "<PF3>"
+      Exit Sub
+    End If
+
+    start_row_pro_history = 1
+    ' Get the HIST information
+    Do
+    For pro_pos = start_row_pro_history to n_screen_size_return_value(0)-2
+    ' function call to get the HIST screen line and check for Transaction OSDE
+    ' If OSDE present then the OSDE should be highlighted in the text
+    ' else the text string should stay the same 
+      
+      pro_history_line = getHistLine(pro_pos)
+    '  xref_pro_history_email(i) = xref_pro_history_email(i) & "<br>" & GetString(pro_pos,1,80) 
+      xref_pro_history_email(i) = xref_pro_history_email(i) & "<br>" & pro_history_line
+      find_bcom = GetString(pro_pos,23,4) 
+      
+      If pro_pos > 6 and find_bcom = "BCOM" Then
+        SendString pro_pos, 3, "X"
+        SendHostKeys "<ENTER>"
+        Wait WAIT_SECONDS
+
+        For bcom_pos = 1 to n_screen_size_return_value(0)-2
+          xref_pro_bcom_email(i) = xref_pro_bcom_email(i) & "<br>" & GetString(bcom_pos,1,80) 
+        next  
+        xref_pro_bcom_email(i) = xref_pro_bcom_email(i) & "<br>" & "<br>" & "<br>"
+
+        SendHostKeys "<PF3>"
+        Wait WAIT_SECONDS
+
+      End If
+    Next
+
+    start_row_pro_history = 7
+    SendHostKeys "<PF8>"
+    Wait WAIT_SECONDS
+
+    Loop Until (GetString(23,3,36) = "CANNOT PAGE FORWARD, NO MORE HISTORY")
+
+    SendHostKeys "<PF3>"
+    Wait WAIT_SECONDS
+  Next
+
+   If master_pro_bcom_email = "" Then
+    master_pro_bcom_email = "No BCOM found for pro no."&master_pro_number
+   End If
+
+' Send Master Pro emails
+   sendEmail( Array(master_pro_number&":MASTER PRO HIST",master_pro_history_email))
+   sendEmail( Array(master_pro_number&":MASTER PRO BCOM",master_pro_bcom_email))
+   sendEmail( Array(master_pro_number&":MASTER PRO ARTR",master_pro_ARTR_email))
+
+  For i=1 to xref_pro_total_number
+    If xref_pro_bcom_email(i) = "" Then
+      xref_pro_bcom_email(i) = "No BCOM found for pro no."&xref_pro_numbers(i)
+    End If
+
+  ' Send XREF Pro emails
+    sendEmail( Array(master_pro_number&":XREF PRO HIST",xref_pro_history_email(i)))
+    sendEmail( Array(master_pro_number&":XREF PRO BCOM",xref_pro_bcom_email(i)))
+  Next
+
+  msgbox "All emails sent"
+End Sub
+
+' ****Function*****
+' Determine the actual screen size (number of rows and columns)
+Function getScreenSizeUserFunction()
+
+' Allocate the local variables for this function
+   Dim n_row, n_col
+   Dim n_screen_size
+
+' Determine the actual screen size (number of rows and columns)
+   n_screen_size = GetScreenSize ()
+   Select Case n_screen_size
+      Case 2000
+         n_row = 25
+         n_col = 80
+
+      Case 2560
+         n_row = 32
+         n_col = 80
+
+      Case 3168
+         n_row = 24
+         n_col = 132 
+
+      Case 3300
+         n_row = 25
+         n_col = 132
+
+      Case 3440
+         n_row = 43
+         n_col = 80
+
+      Case 3564
+         n_row = 27
+         n_col = 132
+
+      Case Else
+         n_row = 24
+         n_col = 80
+   End Select
+
+   getScreenSizeUserFunction = Array(n_row,n_col)
+
+End Function
+
+'*****Function to get each history line and format it if OSDE tran is present on the HIST line*****
+
+Function  getHistLine(pro_pos)
+	Dim string0, tranName, string1, string2
+	 
+	tranName = GetString(pro_pos,23,4)
+	 
+	If tranName = "OSDE" OR tranName = "BCOM" Then
+	   string1 = GetString(pro_pos,1,22)
+	   string2 = GetString(pro_pos,27,54)
+	   string0 = "<strong style='color:#f00'>" & string1 & tranName & string2 & "</strong>"
+	Else
+	   string0 = GetString(pro_pos,1,80)
+	End IF
+	
+	getHistLine = string0
+End Function
+
+' ****Function*****
+Function sendEmail(emailInfo)
+  EmailSubject = emailInfo(0)
+  EmailBody = "<html><head><style>strong { font-weight: bold; }</style></head><body><pre style='font-size:14px;'>"&emailInfo(1)&"</pre></body></html>"
+  Const EmailFrom = "wilsontruckingcorp@shjintl.com"
+  Const EmailFromName = "Wilson Trucking Corp"
+  Const EmailTo = "claims@wilsontrucking.com"
+  Const SMTPServer = "smtp.gmail.com"
+  Const SMTPLogon = "wilsontruckingcorp@shjintl.com"
+  Const SMTPPassword = "wilson39"
+  Const SMTPSSL = True
+  Const SMTPPort = 465
+
+  Const cdoSendUsingPickup = 1  'Send message using local SMTP service pickup directory.
+  Const cdoSendUsingPort = 2  'Send the message using SMTP over TCP/IP networking.
+
+  Const cdoAnonymous = 0  ' No authentication
+  Const cdoBasic = 1  ' BASIC clear text authentication
+  Const cdoNTLM = 2   ' NTLM, Microsoft proprietary authentication
+
+  ' First, create the message
+
+  Set objMessage = CreateObject("CDO.Message")
+  objMessage.Subject = EmailSubject
+  objMessage.From = """" & EmailFromName & """ <" & EmailFrom & ">"
+  objMessage.To = EmailTo
+  'objMessage.TextBody = EmailBody
+  objMessage.HTMLBody = EmailBody
+  ' Second, configure the server
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/sendusing") = 2
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/smtpserver") = SMTPServer
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/smtpauthenticate") = cdoBasic
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/sendusername") = SMTPLogon
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/sendpassword") = SMTPPassword
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/smtpserverport") = SMTPPort
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/smtpusessl") = SMTPSSL
+
+  objMessage.Configuration.Fields.Item _
+  ("http://schemas.microsoft.com/cdo/configuration/smtpconnectiontimeout") = 60
+
+  objMessage.Configuration.Fields.Update
+
+  ' Now send the message!
+
+  objMessage.Send
+End Function
